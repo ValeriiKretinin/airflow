@@ -1,0 +1,50 @@
+general:
+  remote_storage: gcs           # REMOTE_STORAGE, if `none` then `upload` and  `download` command will fail
+  max_file_size: 1073741824      # MAX_FILE_SIZE, 1G by default, useless when upload_by_part is true, use for split data parts files by archives
+  disable_progress_bar: true     # DISABLE_PROGRESS_BAR, show progress bar during upload and download, makes sense only when `upload_concurrency` and `download_concurrency` is 1
+  backups_to_keep_local: 1       # BACKUPS_TO_KEEP_LOCAL, how many latest local backup should be kept, 0 means all created backups will be stored on local disk
+                                 # -1 means backup will keep after `create` but will delete after `create_remote` command  
+                                 # You shall run `clickhouse-backup delete local <backup_name>` command to remove temporary backup files from the local disk
+  backups_to_keep_remote: 3      # BACKUPS_TO_KEEP_REMOTE, how many latest backup should be kept on remote storage, 0 means all uploaded backups will be stored on remote storage.
+                                 # If old backups are required for newer incremental backup then it won't be deleted. Be careful with long incremental backup sequences.
+  log_level: info                # LOG_LEVEL, a choice from `debug`, `info`, `warn`, `error`
+  allow_empty_backups: false     # ALLOW_EMPTY_BACKUPS
+  # concurrency means parallel tables and parallel parts inside tables
+  # for example 4 means max 4 parallel tables and 4 parallel parts inside one table, so equals 16 concurrent streams
+  download_concurrency: 1        # DOWNLOAD_CONCURRENCY, max 255, by default, the value is round(sqrt(AVAILABLE_CPU_CORES / 2))  
+  upload_concurrency: 1          # UPLOAD_CONCURRENCY, max 255, by default, the value is round(sqrt(AVAILABLE_CPU_CORES / 2))
+
+  # RESTORE_SCHEMA_ON_CLUSTER, execute all schema related SQL queries with `ON CLUSTER` clause as Distributed DDL. 
+  # Check `system.clusters` table for the correct cluster name, also `system.macros` can be used.
+  # This isn't applicable when `use_embedded_backup_restore: true`
+  restore_schema_on_cluster: ""   
+  upload_by_part: true           # UPLOAD_BY_PART
+  download_by_part: true         # DOWNLOAD_BY_PART
+  use_resumable_state: true      # USE_RESUMABLE_STATE, allow resume upload and download according to the <backup_name>.resumable file
+
+  # RESTORE_DATABASE_MAPPING, restore rules from backup databases to target databases, which is useful when changing destination database, all atomic tables will be created with new UUIDs.
+  # The format for this env variable is "src_db1:target_db1,src_db2:target_db2". For YAML please continue using map syntax
+  restore_database_mapping: {}   
+  retries_on_failure: 3          # RETRIES_ON_FAILURE, how many times to retry after a failure during upload or download
+  retries_pause: 30s             # RETRIES_PAUSE, duration time to pause after each download or upload failure
+
+  watch_interval: 1h       # WATCH_INTERVAL, use only for `watch` command, backup will create every 1h 
+  full_interval: 24h       # FULL_INTERVAL, use only for `watch` command, full backup will create every 24h 
+  watch_backup_name_template: "shard{shard}-{type}-{time:20060102150405}" # WATCH_BACKUP_NAME_TEMPLATE, used only for `watch` command, macros values will apply from `system.macros` for time:XXX, look format in https://go.dev/src/time/format.go
+
+gcs:
+  credentials_file: "PATH_TO_CRED_FILE"         # GCS_CREDENTIALS_FILE
+  credentials_json: ""         # GCS_CREDENTIALS_JSON
+  credentials_json_encoded: "" # GCS_CREDENTIALS_JSON_ENCODED
+  bucket: "BUCKET_NAME"                   # GCS_BUCKET
+  path: "PATH_NAME"                     # GCS_PATH, `system.macros` values could be applied as {macro_name}
+  compression_level: 1         # GCS_COMPRESSION_LEVEL
+  compression_format: tar      # GCS_COMPRESSION_FORMAT, allowed values tar, lz4, bzip2, gzip, sz, xz, brortli, zstd, `none` for upload data part folders as is
+  storage_class: ARCHIVE      # GCS_STORAGE_CLASS
+
+  # GCS_OBJECT_LABELS, allow setup metadata for each object during upload, use {macro_name} from system.macros and {backupName} for current backup name
+  # The format for this env variable is "key1:value1,key2:value2". For YAML please continue using map syntax 
+  object_labels: {}
+  # GCS_CUSTOM_STORAGE_CLASS_MAP, allow setup storage class depends on backup name regexp pattern, format nameRegexp > className  
+  custom_storage_class_map: {}  
+  debug: false                 # GCS_DEBUG
